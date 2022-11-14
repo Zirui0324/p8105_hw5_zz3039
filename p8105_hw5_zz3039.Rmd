@@ -22,5 +22,24 @@ options(
 
 ## Problem 1
 
+```{r}
+homicide_data = 
+  read.csv("./data/homicide-data.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(
+    city_state = paste(city, state, sep=", ")
+  )
+
+homicide_data %>% 
+  group_by(city) %>% 
+  summarize(n_homicide = n())
+  
+homicide_data %>% 
+  filter(disposition != "Closed by arrest") %>% 
+  group_by(city) %>% 
+  summarize(n_unsolved = n())
+```
+
+
 
 ## Problem 2
