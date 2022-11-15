@@ -22,24 +22,40 @@ options(
 
 ## Problem 1
 
+import data
 ```{r}
 homicide_data = 
   read.csv("./data/homicide-data.csv") %>% 
   janitor::clean_names() %>% 
   mutate(
     city_state = paste(city, state, sep=", ")
-  )
-
-homicide_data %>% 
-  group_by(city) %>% 
-  summarize(n_homicide = n())
-  
-homicide_data %>% 
-  filter(disposition != "Closed by arrest") %>% 
-  group_by(city) %>% 
-  summarize(n_unsolved = n())
+  ) %>% 
+  select(city_state, - city, - state, everything())
 ```
 
+sum over number of cases
+```{r}
+homi_sum = 
+  homicide_data %>% 
+  group_by(city_state) %>% 
+  summarize(
+    n_homicide = n(),
+    n_unsolved = sum(disposition != "Closed by arrest"))
+```
+
+For the city of Baltimore, MD, use the prop.test function to estimate the proportion of homicides that are unsolved; save the output of prop.test as an R object, apply the broom::tidy to this object and pull the estimated proportion and confidence intervals from the resulting tidy dataframe.
+
+```{r}
+balti = 
+  homi_sum %>% 
+  filter(city_state == "Baltimore, MD")
+
+balti_test = 
+  prop.test(balti$n_unsolved, balti$n_homicide)
+
+balti_test %>% 
+  broom::tidy()
+```
 
 
 ## Problem 2
