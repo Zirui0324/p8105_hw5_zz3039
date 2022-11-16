@@ -6,6 +6,7 @@ date: "2022-11-13"
 
 ```{r chunk_library, message=FALSE}
 library(tidyverse)
+library(purrr)
 
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -22,7 +23,7 @@ options(
 
 ## Problem 1
 
-import data
+Import data
 ```{r}
 homicide_data = 
   read.csv("./data/homicide-data.csv") %>% 
@@ -33,7 +34,7 @@ homicide_data =
   select(city_state, - city, - state, everything())
 ```
 
-sum over number of cases
+Sum over number of cases
 ```{r}
 homi_sum = 
   homicide_data %>% 
@@ -43,19 +44,58 @@ homi_sum =
     n_unsolved = sum(disposition != "Closed by arrest"))
 ```
 
-For the city of Baltimore, MD, use the prop.test function to estimate the proportion of homicides that are unsolved; save the output of prop.test as an R object, apply the broom::tidy to this object and pull the estimated proportion and confidence intervals from the resulting tidy dataframe.
-
+Prop.test for baltimore
 ```{r}
 balti = 
   homi_sum %>% 
   filter(city_state == "Baltimore, MD")
 
 balti_test = 
-  prop.test(balti$n_unsolved, balti$n_homicide)
+  prop.test(balti$n_unsolved, balti$n_homicide) %>% 
+  broom::tidy() %>% 
+  mutate(
+    conf.low = round(conf.low, digits = 3),
+    conf.high = round(conf.high, digits = 3)
+  )
 
-balti_test %>% 
-  broom::tidy()
+tibble(
+  balti_es = balti_test$estimate,
+  balti_ci = paste(balti_test$conf.low, balti_test$conf.high, sep=", ")
+)
+```
+
+Prop.test for every city
+```{r}
+homi_prop = 
+  homi_sum %>% 
+  mutate(
+    prop = 
+      map2(.x = n_unsolved, .y = n_homicide, ~prop.test(x = .x, n = .y)),
+    prop_test =
+      map(prop, broom::tidy)) %>% 
+  select(city_state, prop_test)
+  
+
+homi_prop_extrct = 
+  homi_prop %>% 
+  unnest(prop_test) %>%
+  select(city_state, estimate, conf.low, conf.high) %>% 
+  mutate(
+    estimate = round(estimate, digits = 3),
+    conf.low = round(conf.low, digits = 3),
+    conf.high = round(conf.high, digits = 3),
+    CI = str_c("(", conf.low,", ", conf.high, ")")) %>% 
+  select(city_state, estimate, CI, everything())
+```
+
+Create a plot that shows the estimates and CIs for each city – check out geom_errorbar for a way to add error bars based on the upper and lower limits. Organize cities according to the proportion of unsolved homicides.
+```{r}
+homi_prop_extrct %>% 
+  arrange(estimate) 
 ```
 
 
+
 ## Problem 2
+
+
