@@ -27,24 +27,27 @@ Imported data:
 ```{r}
 homicide_data = 
   read.csv("./data/homicide-data.csv") %>% 
-  janitor::clean_names() %>% 
-  mutate(
-    city_state = paste(city, state, sep=", ")
-  ) %>% 
-  select(city_state, - city, - state, everything())
+  janitor::clean_names() 
 ```
+
+The raw data includes **`r ncol(homicide_data)`** variables, which are **`r names(homicide_data)`**, with **`r nrow(homicide_data)`** observations as total.
+
 
 Summed over number of cases:
 ```{r}
 homi_sum = 
   homicide_data %>% 
+  mutate(
+    city_state = paste(city, state, sep=", ")
+  ) %>% 
+  select(city_state, - city, - state, everything()) %>% 
   group_by(city_state) %>% 
   summarize(
     n_homicide = n(),
     n_unsolved = sum(disposition != "Closed by arrest"))
 ```
 
-Prop.test for baltimore:
+Prop.test for Baltimore:
 ```{r}
 balti = 
   homi_sum %>% 
@@ -86,6 +89,8 @@ homi_prop_extrct =
     conf.high = round(conf.high, digits = 3),
     CI = str_c("(", conf.low,", ", conf.high, ")")) %>% 
   select(city_state, estimate, CI, everything())
+
+print(homi_prop_extrct, n = 10)
 ```
 
 Plot:
@@ -97,6 +102,10 @@ homi_prop_extrct %>%
   ggplot(aes(x = city_state, y = estimate)) +
   geom_point(color = "grey") +
   geom_errorbar(mapping=aes(x = city_state, ymin = conf.low, ymax = conf.high), width=0.05, size=1, color="light blue") +
+  labs(
+    x = "City and State",
+    y = "Estimate Proportion"
+  ) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
@@ -129,11 +138,6 @@ for (i in 1:5000) {
 sim_results = bind_rows(output)
 sim_results
 ```
-  t_test = 
-    t.test(sim_data$x, alternative = c("two.sided"), mu = mu) %>% 
-    broom::tidy()
-  
-
 
 Repeated for different mus:
 ```{r}
@@ -161,11 +165,12 @@ sim_results_mus %>%
   ggplot(aes(x = mu, y = power)) +
   geom_line() +
   labs(
-    x = "True mean",
+    x = "True Mean",
     y = "Power"
   )
 ```
-The power of the test increases as the simulation size increases.
+
+The power of the test increases as the mu of the simulation increases.
 
 
 Plot-estimated/true
@@ -180,8 +185,8 @@ sim_results_mus %>%
   geom_line() +
   labs(
     title = "All Simulations",
-    x = "True mean",
-    y = "Estimated mean"
+    x = "True Mean",
+    y = "Estimated Mean"
   )
 
 sim_results_mus %>% 
@@ -199,5 +204,5 @@ sim_results_mus %>%
     y = "Estimated mean"
   )
 ```
-Is the sample average of mu across tests for which the null is rejected approximately equal to the true value of mu? Why or why not?
 
+The sample average of mu across tests for which the null is rejected is not close to the true value of mu, because the t.test told us that under a 0.95 significant level, we believe that the true mu of their population is not 0.
