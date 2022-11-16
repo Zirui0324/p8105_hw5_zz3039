@@ -23,7 +23,7 @@ options(
 
 ## Problem 2
 
-Import data
+Imported data:
 ```{r}
 homicide_data = 
   read.csv("./data/homicide-data.csv") %>% 
@@ -34,7 +34,7 @@ homicide_data =
   select(city_state, - city, - state, everything())
 ```
 
-Sum over number of cases
+Summed over number of cases:
 ```{r}
 homi_sum = 
   homicide_data %>% 
@@ -44,7 +44,7 @@ homi_sum =
     n_unsolved = sum(disposition != "Closed by arrest"))
 ```
 
-Prop.test for baltimore
+Prop.test for baltimore:
 ```{r}
 balti = 
   homi_sum %>% 
@@ -64,7 +64,7 @@ tibble(
 )
 ```
 
-Prop.test for every city
+Prop.test for each city:
 ```{r}
 homi_prop = 
   homi_sum %>% 
@@ -88,7 +88,7 @@ homi_prop_extrct =
   select(city_state, estimate, CI, everything())
 ```
 
-Plot
+Plot:
 ```{r}
 homi_prop_extrct %>% 
   mutate(
@@ -102,15 +102,16 @@ homi_prop_extrct %>%
 
 ## Problem 3
 
+Wrote function and simmed:
 ```{r}
-p3_sim = function(n, mu = 0, sigma = 5) {
+p3_sim = function(n, mu, sigma = 5) {
   
   sim_data = tibble(
     x = rnorm(n, mean = mu, sd = sigma),
   )
 
   t_test = 
-    t.test(sim_data$x, alternative = c("two.sided"), mu = 0) %>% 
+    t.test(sim_data$x, alternative = c("two.sided"), mu = mu) %>% 
     broom::tidy()
   
   tibble(
@@ -122,11 +123,49 @@ p3_sim = function(n, mu = 0, sigma = 5) {
 output = vector("list", 5000)
 
 for (i in 1:5000) {
-  output[[i]] = p3_sim(30)
+  output[[i]] = p3_sim(n = 30, mu = 0)
 }
 
 sim_results = bind_rows(output)
 sim_results
 ```
 
+Repeated for different mus:
+```{r}
+sim_results_mus = 
+  expand_grid(
+    sample_size = 30,
+    mu = c(1, 2, 3, 4, 5, 6),
+    iter = 1:5000
+  ) %>% 
+  mutate(
+    estimate_df = map2(.x = sample_size, .y = mu, ~p3_sim(n=.x, mu=.y))
+    ) %>% 
+  unnest(estimate_df)
+
+sim_results_mus
+```
+
+Make a plot showing the proportion of times the null was rejected (the power of the test) on the y axis and the true value of mu on the x axis. Describe the association between effect size and power.
+```{r}
+sim_results_mus %>% 
+  group_by(mu) %>% 
+  summarize(
+    power = sum(p_value < 0.05)/5000
+  ) %>% 
+  ggplot(aes(x = mu, y = power)) +
+  geom_line()
+```
+
+Make a plot showing the average estimate of mu on the y axis and the true value of mu on the x axis.
+```{r}
+sim_results_mus %>% 
+  group_by(mu) %>% 
+  summarize(
+    mu_est = mean(mu_hat)
+  ) %>% 
+  ggplot(aes(x = mu, y = mu_est)) +
+  geom_point() +
+  geom_line()
+```
 
