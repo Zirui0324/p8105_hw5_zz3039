@@ -88,10 +88,16 @@ homi_prop_extrct =
   select(city_state, estimate, CI, everything())
 ```
 
-Create a plot that shows the estimates and CIs for each city – check out geom_errorbar for a way to add error bars based on the upper and lower limits. Organize cities according to the proportion of unsolved homicides.
+Plot
 ```{r}
 homi_prop_extrct %>% 
-  arrange(estimate) 
+  mutate(
+    city_state = fct_reorder(city_state, estimate)
+  ) %>% 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point(color = "grey") +
+  geom_errorbar(mapping=aes(x = city_state, ymin = conf.low, ymax = conf.high), width=0.05, size=1, color="light blue") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 
